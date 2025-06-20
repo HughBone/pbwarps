@@ -40,7 +40,6 @@ public class WarpSelectGui extends PagedGui {
     @Override
     protected GuiElementInterface getElement(int id) {
         if (this.warps.size() > id) {
-            var server = this.player.getServerWorld().getServer();
             var warp = this.warps.get(id);
 
             var icon = GuiElementBuilder.from(warp.icon());
