@@ -12,6 +12,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Style;
+import net.minecraft.text.StyleSpriteSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
@@ -19,7 +20,7 @@ import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 public class GuiUtils {
-    public static final Style TEXTURE_STYLE = Style.EMPTY.withFont(Identifier.of("pbwarps:gui")).withColor(Formatting.WHITE);
+    public static final Style TEXTURE_STYLE = Style.EMPTY.withFont(new StyleSpriteSource.Font(Identifier.of("pbwarps:gui"))).withColor(Formatting.WHITE);
 
     public static final GuiElement EMPTY = GuiElement.EMPTY;
     public static final GuiElement EMPTY_STACK = new GuiElementBuilder(Items.WHITE_STAINED_GLASS_PANE)
@@ -84,13 +85,13 @@ public class GuiUtils {
     private static GuiElementBuilder nextPageBase(ServerPlayerEntity player) {
         return hasTexture(player)
                 ? new GuiElementBuilder(Items.TRIAL_KEY).noDefaults().model(NEXT_PAGE_TEXTURE)
-                : new GuiElementBuilder(Items.PLAYER_HEAD).noDefaults().setSkullOwner(GuiHeadTextures.GUI_NEXT_PAGE);
+                : new GuiElementBuilder(Items.PLAYER_HEAD).noDefaults().setProfileSkinTexture(GuiHeadTextures.GUI_NEXT_PAGE);
     }
 
     private static GuiElementBuilder previousPageBase(ServerPlayerEntity player) {
         return hasTexture(player)
                 ? new GuiElementBuilder(Items.TRIAL_KEY).noDefaults().model(PREVIOUS_PAGE_TEXTURE)
-                : new GuiElementBuilder(Items.PLAYER_HEAD).noDefaults().setSkullOwner(GuiHeadTextures.GUI_PREVIOUS_PAGE);
+                : new GuiElementBuilder(Items.PLAYER_HEAD).noDefaults().setProfileSkinTexture(GuiHeadTextures.GUI_PREVIOUS_PAGE);
     }
 
     public static GuiElement previousPage(ServerPlayerEntity player, PageAware gui) {

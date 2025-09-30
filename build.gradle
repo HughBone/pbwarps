@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.10-SNAPSHOT'
+	id 'fabric-loom' version '1.11-SNAPSHOT'
 	id 'maven-publish'
 	id "com.modrinth.minotaur" version "2.+"
 }
@@ -33,14 +33,14 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modImplementation include('xyz.nucleoid:server-translations-api:2.5.1+1.21.5')
+	modImplementation include('xyz.nucleoid:server-translations-api:2.5.2+1.21.9-pre3')
 	//modImplementation include('eu.pb4:polymer-core:0.9.18+1.21.1')
-	modImplementation include('eu.pb4:polymer-resource-pack:0.13.1+1.21.6')
-	modRuntimeOnly 'eu.pb4:polymer-autohost:0.13.1+1.21.6'
-	modImplementation include("eu.pb4:sgui:1.10.0+1.21.6")
-	modImplementation include("eu.pb4:placeholder-api:2.7.0+1.21.6")
-	modImplementation include('eu.pb4:predicate-api:0.6.0+1.21.2')
-	modImplementation include("me.lucko:fabric-permissions-api:0.4.0")
+	modImplementation include('eu.pb4:polymer-resource-pack:0.14.0-rc.2+1.21.9-rc1')
+	modRuntimeOnly 'eu.pb4:polymer-autohost:0.14.0-rc.2+1.21.9-rc1'
+	modImplementation include("eu.pb4:sgui:1.11.0+1.21.9")
+	modImplementation include("eu.pb4:placeholder-api:2.8.0+1.21.9")
+	modImplementation include('eu.pb4:predicate-api:0.6.1+1.21.9')
+	modImplementation include("me.lucko:fabric-permissions-api:0.4.2-patbox.1")
 }
 
 processResources {

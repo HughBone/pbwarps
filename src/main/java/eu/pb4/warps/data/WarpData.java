@@ -60,12 +60,12 @@ public record WarpData(String id, int priority, WrappedText name, ItemStack icon
     }
 
     public void handleTeleport(Entity entity) {
-        var target = this.target().asTeleportTarget(Objects.requireNonNull(entity.getWorld().getServer()), entity, this::teleportEffects);
+        var target = this.target().asTeleportTarget(Objects.requireNonNull(entity.getEntityWorld().getServer()), entity, this::teleportEffects);
 
         if (target != null) {
             if (!entity.isInvisible()) {
-                entity.getWorld().sendEntityStatus(entity, (byte) 46);
-                entity.getWorld().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                entity.getEntityWorld().sendEntityStatus(entity, (byte) 46);
+                entity.getEntityWorld().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
             }
             entity.teleportTo(target);
         }
@@ -73,9 +73,9 @@ public record WarpData(String id, int priority, WrappedText name, ItemStack icon
 
     private void teleportEffects(Entity entity) {
         if (!entity.isInvisible()) {
-            entity.getWorld().emitGameEvent(GameEvent.TELEPORT, entity.getPos(), GameEvent.Emitter.of(entity));
-            entity.getWorld().sendEntityStatus(entity, (byte) 46);
-            entity.getWorld().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+            entity.getEntityWorld().emitGameEvent(GameEvent.TELEPORT, entity.getEntityPos(), GameEvent.Emitter.of(entity));
+            entity.getEntityWorld().sendEntityStatus(entity, (byte) 46);
+            entity.getEntityWorld().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
         }
     }
 
