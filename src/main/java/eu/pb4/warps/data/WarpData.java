@@ -7,17 +7,17 @@ import eu.pb4.placeholders.api.parsers.WrappedText;
 import eu.pb4.predicate.api.MinecraftPredicate;
 import eu.pb4.predicate.api.PredicateContext;
 import eu.pb4.predicate.api.PredicateRegistry;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.Optional;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.gameevent.GameEvent;
 
 public record WarpData(String id, int priority, WrappedText name, ItemStack icon, Target target,
                        Optional<MinecraftPredicate> predicate) {
@@ -27,13 +27,13 @@ public record WarpData(String id, int priority, WrappedText name, ItemStack icon
             Codec.STRING.fieldOf("id").forGetter(WarpData::id),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(WarpData::priority),
             NAME_PARSER.codec().fieldOf("name").forGetter(WarpData::name),
-            ItemStack.UNCOUNTED_CODEC.lenientOptionalFieldOf("icon", Items.GRASS_BLOCK.getDefaultStack()).forGetter(WarpData::icon),
+            ItemStack.SINGLE_ITEM_CODEC.lenientOptionalFieldOf("icon", Items.GRASS_BLOCK.getDefaultInstance()).forGetter(WarpData::icon),
             Target.CODEC.forGetter(WarpData::target),
             PredicateRegistry.CODEC.lenientOptionalFieldOf("predicate").forGetter(WarpData::predicate)
     ).apply(instance, WarpData::new));
 
     public WarpData(String id, Target target) {
-        this(id, 0, WrappedText.from(NAME_PARSER, id), Items.GRASS_BLOCK.getDefaultStack(), target, Optional.empty());
+        this(id, 0, WrappedText.from(NAME_PARSER, id), Items.GRASS_BLOCK.getDefaultInstance(), target, Optional.empty());
     }
 
     public WarpData withId(String id) {
@@ -60,26 +60,26 @@ public record WarpData(String id, int priority, WrappedText name, ItemStack icon
     }
 
     public void handleTeleport(Entity entity) {
-        var target = this.target().asTeleportTarget(Objects.requireNonNull(entity.getEntityWorld().getServer()), entity, this::teleportEffects);
+        var target = this.target().asTeleportTarget(Objects.requireNonNull(entity.level().getServer()), entity, this::teleportEffects);
 
         if (target != null) {
             if (!entity.isInvisible()) {
-                entity.getEntityWorld().sendEntityStatus(entity, (byte) 46);
-                entity.getEntityWorld().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                entity.level().broadcastEntityEvent(entity, (byte) 46);
+                entity.level().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.PLAYER_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
             }
-            entity.teleportTo(target);
+            entity.teleport(target);
         }
     }
 
     private void teleportEffects(Entity entity) {
         if (!entity.isInvisible()) {
-            entity.getEntityWorld().emitGameEvent(GameEvent.TELEPORT, entity.getEntityPos(), GameEvent.Emitter.of(entity));
-            entity.getEntityWorld().sendEntityStatus(entity, (byte) 46);
-            entity.getEntityWorld().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+            entity.level().gameEvent(GameEvent.TELEPORT, entity.position(), GameEvent.Context.of(entity));
+            entity.level().broadcastEntityEvent(entity, (byte) 46);
+            entity.level().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.PLAYER_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
         }
     }
 
-    public boolean canUse(ServerCommandSource source) {
+    public boolean canUse(CommandSourceStack source) {
         return this.predicate.isEmpty() || this.predicate.get().test(PredicateContext.of(source)).success();
     }
 }

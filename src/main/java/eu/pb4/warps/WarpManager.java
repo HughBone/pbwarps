@@ -5,7 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import eu.pb4.warps.data.WarpData;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.WorldSavePath;
+import net.minecraft.world.level.storage.LevelResource;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -32,11 +32,11 @@ public class WarpManager {
     }
 
     public static void setup(MinecraftServer server) {
-        var path = server.getSavePath(WorldSavePath.ROOT).resolve("warps.json");
+        var path = server.getWorldPath(LevelResource.ROOT).resolve("warps.json");
         manager = new WarpManager(server, path);
         if (Files.exists(path)) {
             try {
-                var data = SAVE_CODEC.decode(server.getRegistryManager().getOps(JsonOps.INSTANCE), JsonParser.parseString(Files.readString(path)));
+                var data = SAVE_CODEC.decode(server.registryAccess().createSerializationContext(JsonOps.INSTANCE), JsonParser.parseString(Files.readString(path)));
                 data.result().get().getFirst().forEach(x -> manager.warps.put(x.id(), x));
             } catch (Throwable e) {
                 e.printStackTrace();
@@ -105,7 +105,7 @@ public class WarpManager {
     }
 
     public void save() {
-        var data = SAVE_CODEC.encodeStart(server.getRegistryManager().getOps(JsonOps.INSTANCE), List.copyOf(this.warps.values()));
+        var data = SAVE_CODEC.encodeStart(server.registryAccess().createSerializationContext(JsonOps.INSTANCE), List.copyOf(this.warps.values()));
         if (data.isSuccess()) {
             try {
                 Files.writeString(this.savePath, data.result().get().toString());

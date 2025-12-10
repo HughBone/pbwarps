@@ -14,28 +14,33 @@ import eu.pb4.warps.data.WarpData;
 import eu.pb4.warps.mixins.PredicateRegistryAccessor;
 import eu.pb4.warps.ui.WarpSelectGui;
 import me.lucko.fabric.api.permissions.v0.Permissions;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.CommandSource;
-import net.minecraft.command.argument.*;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtHelper;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.CompoundTagArgument;
+import net.minecraft.commands.arguments.DimensionArgument;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.coordinates.RotationArgument;
+import net.minecraft.commands.arguments.coordinates.Vec3Argument;
+import net.minecraft.commands.arguments.item.ItemArgument;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.random.Random;
-
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.RandomSource;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
 
 public class WarpCommands {
-    private static final SuggestionProvider<ServerCommandSource> WARP_ID_SUGGESTION_WITH_PREDICATE = (context, builder) -> {
+    private static final SuggestionProvider<CommandSourceStack> WARP_ID_SUGGESTION_WITH_PREDICATE = (context, builder) -> {
         var ctx = PredicateContext.of(context.getSource());
         for (var warp : WarpManager.get().warps()) {
             if (warp.id().startsWith(builder.getRemainingLowerCase()) && (warp.predicate().isEmpty() || warp.predicate().get().test(ctx).success())) {
@@ -45,7 +50,7 @@ public class WarpCommands {
         return builder.buildFuture();
     };
 
-    private static final SuggestionProvider<ServerCommandSource> WARP_ID_SUGGESTION = (context, builder) -> {
+    private static final SuggestionProvider<CommandSourceStack> WARP_ID_SUGGESTION = (context, builder) -> {
         for (var warp : WarpManager.get().warps()) {
             if (warp.id().startsWith(builder.getRemainingLowerCase())) {
                 builder.suggest(warp.id().contains(" ") ? '"' + warp.id() + '"' : warp.id(), warp.name().text());
@@ -54,7 +59,7 @@ public class WarpCommands {
         return builder.buildFuture();
     };
 
-    public static void init(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess access, CommandManager.RegistrationEnvironment env) {
+    public static void init(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext access, Commands.CommandSelection env) {
         dispatcher.register(literal("warp")
                 .requires(Permissions.require("pbwarps.command", true))
                 .executes(WarpCommands::openWarpUi)
@@ -63,11 +68,11 @@ public class WarpCommands {
                 )
         );
 
-        Supplier<RequiredArgumentBuilder<ServerCommandSource, ?>> createPosition = () -> argument("position", Vec3ArgumentType.vec3(true))
+        Supplier<RequiredArgumentBuilder<CommandSourceStack, ?>> createPosition = () -> argument("position", Vec3Argument.vec3(true))
                 .executes(WarpCommands::createWarp)
-                .then(argument("rotation", RotationArgumentType.rotation())
+                .then(argument("rotation", RotationArgument.rotation())
                         .executes(WarpCommands::createWarp)
-                        .then(argument("world", DimensionArgumentType.dimension())
+                        .then(argument("world", DimensionArgument.dimension())
                                 .executes(WarpCommands::createWarp)
                         )
                 );
@@ -82,7 +87,7 @@ public class WarpCommands {
                                         .executes(WarpCommands::createWarp)
                                         .then(createPosition.get())
                                         .then(
-                                                argument("icon", ItemStackArgumentType.itemStack(access))
+                                                argument("icon", ItemArgument.item(access))
                                                         .executes(WarpCommands::createWarp)
                                                         .then(createPosition.get())
                                         )
@@ -101,11 +106,11 @@ public class WarpCommands {
                                 .then(literal("position")
                                         .requires(Permissions.require("pbwarps.modify.position", 2))
                                         .executes(WarpCommands::setPosition)
-                                        .then(argument("position", Vec3ArgumentType.vec3(true))
+                                        .then(argument("position", Vec3Argument.vec3(true))
                                                 .executes(WarpCommands::setPosition)
-                                                .then(argument("rotation", RotationArgumentType.rotation())
+                                                .then(argument("rotation", RotationArgument.rotation())
                                                         .executes(WarpCommands::setPosition)
-                                                        .then(argument("world", DimensionArgumentType.dimension())
+                                                        .then(argument("world", DimensionArgument.dimension())
                                                                 .executes(WarpCommands::setPosition)
                                                         )
                                                 )
@@ -113,7 +118,7 @@ public class WarpCommands {
                                 )
                                 .then(literal("icon")
                                         .requires(Permissions.require("pbwarps.modify.icon", 2))
-                                        .then(argument("icon", ItemStackArgumentType.itemStack(access)).executes(WarpCommands::setIcon))
+                                        .then(argument("icon", ItemArgument.item(access)).executes(WarpCommands::setIcon))
                                 )
                                 .then(literal("priority")
                                         .requires(Permissions.require("pbwarps.modify.priority", 2))
@@ -122,10 +127,10 @@ public class WarpCommands {
                                 .then(literal("predicate")
                                         .requires(Permissions.require("pbwarps.modify.predicate", 2))
                                         .then(literal("clear").executes(WarpCommands::clearPredicate))
-                                        .then(argument("predicate_type", IdentifierArgumentType.identifier())
-                                                .suggests((context, builder) -> CommandSource.suggestIdentifiers(PredicateRegistryAccessor.getCODECS().keySet(), builder))
+                                        .then(argument("predicate_type", IdentifierArgument.id())
+                                                .suggests((context, builder) -> SharedSuggestionProvider.suggestResource(PredicateRegistryAccessor.getCODECS().keySet(), builder))
                                                 .executes(WarpCommands::setPredicate)
-                                                .then(argument("data", NbtCompoundArgumentType.nbtCompound())
+                                                .then(argument("data", CompoundTagArgument.compoundTag())
                                                         .executes(WarpCommands::setPredicate)
                                                 )
                                         )
@@ -145,7 +150,7 @@ public class WarpCommands {
                         .then(argument("id", StringArgumentType.string())
                                 .suggests(WARP_ID_SUGGESTION)
                                 .executes(WarpCommands::warpTeleportSelfUnrestricted)
-                                .then(argument("entity", EntityArgumentType.entities())
+                                .then(argument("entity", EntityArgument.entities())
                                         .requires(Permissions.require("pbwarps.teleport.others", 2))
                                         .executes(WarpCommands::warpTeleportOthers)
                                 )
@@ -162,154 +167,154 @@ public class WarpCommands {
         );
     }
 
-    private static int showInfo(CommandContext<ServerCommandSource> context) {
+    private static int showInfo(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
         var warp = WarpManager.get().get(id);
         if (warp == null) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
             return 0;
         }
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.info.id", warp.id()));
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.info.priority", warp.priority()));
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.info.name", warp.name().text()));
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.info.unformatted_name", warp.name().input()));
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.info.icon", warp.icon().toHoverableText()));
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.info.position", warp.target().pos().toString(), warp.target().yaw().map(String::valueOf).orElse("~"), warp.target().pitch().map(String::valueOf).orElse("~"), warp.target().world().getValue().toString()));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.id", warp.id()));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.priority", warp.priority()));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.name", warp.name().text()));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.unformatted_name", warp.name().input()));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.icon", warp.icon().getDisplayName()));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.position", warp.target().pos().toString(), warp.target().yaw().map(String::valueOf).orElse("~"), warp.target().pitch().map(String::valueOf).orElse("~"), warp.target().world().identifier().toString()));
         if (warp.predicate().isPresent()) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.info.predicate_type", warp.predicate().get().identifier().toString()));
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.info.predicate_data", NbtHelper.toPrettyPrintedText(
-                    warp.predicate().get().codec().codec().encodeStart(context.getSource().getRegistryManager().getOps(NbtOps.INSTANCE), warp.predicate().get()).getOrThrow()
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.predicate_type", warp.predicate().get().identifier().toString()));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.predicate_data", NbtUtils.toPrettyComponent(
+                    warp.predicate().get().codec().codec().encodeStart(context.getSource().registryAccess().createSerializationContext(NbtOps.INSTANCE), warp.predicate().get()).getOrThrow()
             )));
         }
         return 1;
     }
 
-    private static int clearPredicate(CommandContext<ServerCommandSource> context) {
+    private static int clearPredicate(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
         if (WarpManager.get().updateWarp(id, x -> x.withPredicate(null))) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.modify.predicate.clear", id));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.predicate.clear", id));
             return 1;
         }
 
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int setPredicate(CommandContext<ServerCommandSource> context) {
+    private static int setPredicate(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
-        var type = IdentifierArgumentType.getIdentifier(context, "predicate_type");
+        var type = IdentifierArgument.getId(context, "predicate_type");
         var codec = PredicateRegistry.getCodec(type);
         if (codec == null) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.modify.predicate.invalid_predicate", type.toString()).formatted(Formatting.RED));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.predicate.invalid_predicate", type.toString()).withStyle(ChatFormatting.RED));
             return 0;
         }
-        NbtCompound data = new NbtCompound();
+        CompoundTag data = new CompoundTag();
 
         try {
-            data = NbtCompoundArgumentType.getNbtCompound(context, "data");
+            data = CompoundTagArgument.getCompoundTag(context, "data");
         } catch (Throwable ignored) {
         }
 
-        var predicate = codec.codec().decode(context.getSource().getRegistryManager().getOps(NbtOps.INSTANCE), data);
+        var predicate = codec.codec().decode(context.getSource().registryAccess().createSerializationContext(NbtOps.INSTANCE), data);
         if (predicate.isError()) {
-            var alt = new NbtCompound();
+            var alt = new CompoundTag();
             alt.put("value", data);
-            var maybe = codec.codec().decode(context.getSource().getRegistryManager().getOps(NbtOps.INSTANCE), alt);
+            var maybe = codec.codec().decode(context.getSource().registryAccess().createSerializationContext(NbtOps.INSTANCE), alt);
             if (maybe.isSuccess()) {
                 predicate = maybe;
             }
         }
 
         if (predicate.error().isPresent()) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.modify.predicate.invalid_predicate_data", type.toString()).formatted(Formatting.RED));
-            context.getSource().sendMessage(Text.literal(predicate.error().get().message()).formatted(Formatting.RED));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.predicate.invalid_predicate_data", type.toString()).withStyle(ChatFormatting.RED));
+            context.getSource().sendSystemMessage(Component.literal(predicate.error().get().message()).withStyle(ChatFormatting.RED));
             return 0;
         }
 
         var finalPredicate = predicate;
         if (WarpManager.get().updateWarp(id, x -> x.withPredicate(finalPredicate.result().get().getFirst()))) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.modify.predicate", id, type.toString(), NbtHelper.toPrettyPrintedText(data)));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.predicate", id, type.toString(), NbtUtils.toPrettyComponent(data)));
             return 1;
         }
 
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int removeWarp(CommandContext<ServerCommandSource> context) {
+    private static int removeWarp(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
 
         if (WarpManager.get().removeWarp(id)) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.remove", id));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.remove", id));
             return 1;
         }
 
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int setIcon(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    private static int setIcon(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var id = StringArgumentType.getString(context, "id");
-        var icon = ItemStackArgumentType.getItemStackArgument(context, "icon").createStack(1, false);
+        var icon = ItemArgument.getItem(context, "icon").createItemStack(1, false);
 
         if (WarpManager.get().updateWarp(id, x -> x.withIcon(icon))) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.modify.icon", id, icon.toHoverableText()));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.icon", id, icon.getDisplayName()));
             return 1;
         }
 
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int setPosition(CommandContext<ServerCommandSource> context) {
+    private static int setPosition(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
         var target = getTarget(context);
 
         if (WarpManager.get().updateWarp(id, x -> x.withTarget(target))) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.modify.position", id, target.pos().toString(), target.yaw().map(String::valueOf).orElse("~"), target.pitch().map(String::valueOf).orElse("~"), target.world().getValue().toString()));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.position", id, target.pos().toString(), target.yaw().map(String::valueOf).orElse("~"), target.pitch().map(String::valueOf).orElse("~"), target.world().identifier().toString()));
             return 1;
         }
 
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int setName(CommandContext<ServerCommandSource> context) {
+    private static int setName(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
         var name = StringArgumentType.getString(context, "name");
 
         if (WarpManager.get().updateWarp(id, x -> x.withName(name))) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.modify.name", id, Objects.requireNonNull(WarpManager.get().get(id)).name().text()));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.name", id, Objects.requireNonNull(WarpManager.get().get(id)).name().text()));
             return 1;
         }
 
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int setPriority(CommandContext<ServerCommandSource> context) {
+    private static int setPriority(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
         var priority = IntegerArgumentType.getInteger(context, "priority");
 
         if (WarpManager.get().updateWarp(id, x -> x.withPriority(priority))) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.modify.priority", id, Objects.requireNonNull(WarpManager.get().get(id)).name().text()));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.priority", id, Objects.requireNonNull(WarpManager.get().get(id)).name().text()));
             return 1;
         }
 
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int createWarp(CommandContext<ServerCommandSource> context) {
+    private static int createWarp(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
         var target = getTarget(context);
 
-        var icon = Registries.ITEM.getRandom(Random.create()).orElseThrow().value().getDefaultStack();
+        var icon = BuiltInRegistries.ITEM.getRandom(RandomSource.create()).orElseThrow().value().getDefaultInstance();
 
         var warp = new WarpData(id, target);
 
         try {
-            icon = ItemStackArgumentType.getItemStackArgument(context, "icon").createStack(1, false);
+            icon = ItemArgument.getItem(context, "icon").createItemStack(1, false);
         } catch (Throwable ignored) {}
         warp = warp.withIcon(icon);
 
@@ -319,79 +324,79 @@ public class WarpCommands {
         } catch (Throwable ignored) {}
 
         if (WarpManager.get().addWarp(warp)) {
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.create.success", id, target.pos().toString(), target.yaw().map(String::valueOf).orElse("~"), target.pitch().map(String::valueOf).orElse("~"), target.world().getValue().toString()));
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.create.success", id, target.pos().toString(), target.yaw().map(String::valueOf).orElse("~"), target.pitch().map(String::valueOf).orElse("~"), target.world().identifier().toString()));
             return 1;
         }
 
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.create.duplicate", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.create.duplicate", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static Target getTarget(CommandContext<ServerCommandSource> context) {
-        var world = context.getSource().getWorld().getRegistryKey();
+    private static Target getTarget(CommandContext<CommandSourceStack> context) {
+        var world = context.getSource().getLevel().dimension();
         var pos = context.getSource().getPosition();
         float pitch = context.getSource().getRotation().x;
         float yaw = context.getSource().getRotation().y;
 
         try {
-            pos = Vec3ArgumentType.getVec3(context, "position");
+            pos = Vec3Argument.getVec3(context, "position");
         } catch (Throwable ignored) {
         }
         try {
-            var vec = RotationArgumentType.getRotation(context, "rotation").getRotation(context.getSource());
+            var vec = RotationArgument.getRotation(context, "rotation").getRotation(context.getSource());
             pitch = vec.x;
             yaw = vec.y;
         } catch (Throwable ignored) {
         }
         try {
-            world = DimensionArgumentType.getDimensionArgument(context, "world").getRegistryKey();
+            world = DimensionArgument.getDimension(context, "world").dimension();
         } catch (Throwable ignored) {
         }
 
         return new Target(world, pos, Optional.of(pitch), Optional.of(yaw));
     }
 
-    private static int warpTeleportSelf(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    private static int warpTeleportSelf(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var id = StringArgumentType.getString(context, "id");
         var warp = WarpManager.get().get(id);
         if (warp != null && warp.canUse(context.getSource())) {
-            warp.handleTeleport(context.getSource().getEntityOrThrow());
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.warp", warp.name().text()));
+            warp.handleTeleport(context.getSource().getEntityOrException());
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.warp", warp.name().text()));
             return 1;
         }
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int warpTeleportSelfUnrestricted(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    private static int warpTeleportSelfUnrestricted(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var id = StringArgumentType.getString(context, "id");
         var warp = WarpManager.get().get(id);
         if (warp != null) {
-            warp.handleTeleport(context.getSource().getEntityOrThrow());
-            context.getSource().sendMessage(Text.translatable("command.pbwarps.warp", warp.name().text()));
+            warp.handleTeleport(context.getSource().getEntityOrException());
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.warp", warp.name().text()));
             return 1;
         }
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int warpTeleportOthers(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    private static int warpTeleportOthers(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var id = StringArgumentType.getString(context, "id");
-        var entities = EntityArgumentType.getEntities(context, "entity");
+        var entities = EntityArgument.getEntities(context, "entity");
         var warp = WarpManager.get().get(id);
         if (warp != null) {
             for (var entity : entities) {
                 warp.handleTeleport(entity);
-                context.getSource().sendMessage(Text.translatable("command.pbwarps.teleport.other", entity.getName(), warp.name().text()));
+                context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.teleport.other", entity.getName(), warp.name().text()));
             }
             return 1;
         }
-        context.getSource().sendMessage(Text.translatable("command.pbwarps.invalid_warp", id).formatted(Formatting.RED));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
         return 0;
     }
 
-    private static int openWarpUi(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        WarpSelectGui.open(context.getSource().getPlayerOrThrow());
+    private static int openWarpUi(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        WarpSelectGui.open(context.getSource().getPlayerOrException());
         return 0;
     }
 }

@@ -4,16 +4,9 @@ import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.elements.GuiElementInterface;
 import eu.pb4.sgui.api.gui.SimpleGui;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.inventory.MenuType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,13 +17,13 @@ public abstract class PagedGui extends SimpleGui implements PageAware {
     public boolean ignoreCloseCallback;
     protected int page = 0;
 
-    public PagedGui(ServerPlayerEntity player, @Nullable Runnable closeCallback) {
-        super(ScreenHandlerType.GENERIC_9X5, player, false);
+    public PagedGui(ServerPlayer player, @Nullable Runnable closeCallback) {
+        super(MenuType.GENERIC_9x5, player, false);
         this.closeCallback = closeCallback;
     }
 
-    public static void playClickSound(ServerPlayerEntity player) {
-        player.playSoundToPlayer(SoundEvents.UI_BUTTON_CLICK.value(), SoundCategory.MASTER, 1, 1);
+    public static void playClickSound(ServerPlayer player) {
+        GuiUtils.playClickSound(player);
     }
 
     public void refreshOpen() {
@@ -96,7 +89,7 @@ public abstract class PagedGui extends SimpleGui implements PageAware {
 
     @Override
     public void setPage(int page) {
-        this.page = MathHelper.clamp(page, 0, getPageAmount());
+        this.page = Mth.clamp(page, 0, getPageAmount());
     }
 
     @Override

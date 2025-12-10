@@ -3,32 +3,31 @@ package eu.pb4.warps.data;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.entity.Entity;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.TeleportTarget;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.portal.TeleportTransition;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
-public record Target(RegistryKey<World> world, Vec3d pos, Optional<Float> pitch, Optional<Float> yaw) {
+public record Target(ResourceKey<Level> world, Vec3 pos, Optional<Float> pitch, Optional<Float> yaw) {
     public static final MapCodec<Target> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            RegistryKey.createCodec(RegistryKeys.WORLD).fieldOf("world").forGetter(Target::world),
-            Vec3d.CODEC.fieldOf("pos").forGetter(Target::pos),
+            ResourceKey.codec(Registries.DIMENSION).fieldOf("world").forGetter(Target::world),
+            Vec3.CODEC.fieldOf("pos").forGetter(Target::pos),
             Codec.FLOAT.optionalFieldOf("pitch").forGetter(Target::pitch),
             Codec.FLOAT.optionalFieldOf("yaw").forGetter(Target::yaw)
     ).apply(instance, Target::new));
 
     @Nullable
-    public TeleportTarget asTeleportTarget(MinecraftServer server, Entity entity, TeleportTarget.PostDimensionTransition transition) {
-        var world = server.getWorld(this.world);
+    public TeleportTransition asTeleportTarget(MinecraftServer server, Entity entity, TeleportTransition.PostTeleportTransition transition) {
+        var world = server.getLevel(this.world);
         if (world == null) {
             return null;
         }
-        return new TeleportTarget(world, this.pos, Vec3d.ZERO, yaw.orElse(entity.getYaw()), pitch.orElse(entity.getPitch()), transition);
+        return new TeleportTransition(world, this.pos, Vec3.ZERO, yaw.orElse(entity.getYRot()), pitch.orElse(entity.getXRot()), transition);
     }
 }

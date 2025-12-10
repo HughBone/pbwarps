@@ -5,12 +5,11 @@ import eu.pb4.warps.ui.GuiUtils;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.WorldSavePath;
+import net.minecraft.resources.Identifier;
 
 public class ModInit implements ModInitializer {
     public static Identifier id(String s) {
-        return Identifier.of("pbwarps", s);
+        return Identifier.fromNamespaceAndPath("pbwarps", s);
     }
 
     @Override
