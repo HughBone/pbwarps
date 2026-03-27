@@ -13,7 +13,6 @@ import eu.pb4.warps.data.Target;
 import eu.pb4.warps.data.WarpData;
 import eu.pb4.warps.mixins.PredicateRegistryAccessor;
 import eu.pb4.warps.ui.WarpSelectGui;
-import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -31,11 +30,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.permissions.PermissionLevel;
 import net.minecraft.util.RandomSource;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static eu.pb4.warps.ModInit.id;
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
@@ -61,7 +62,7 @@ public class WarpCommands {
 
     public static void init(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext access, Commands.CommandSelection env) {
         dispatcher.register(literal("warp")
-                .requires(Permissions.require("pbwarps.command", true))
+                .requires(FabricPermissionBridge.require(id("command"), true))
                 .executes(WarpCommands::openWarpUi)
                 .then(argument("id", StringArgumentType.greedyString()).suggests(WARP_ID_SUGGESTION_WITH_PREDICATE)
                         .executes(WarpCommands::warpTeleportSelf)
@@ -78,9 +79,9 @@ public class WarpCommands {
                 );
 
         dispatcher.register(literal("warps")
-                .requires(Permissions.require("pbwarps.warps_command", true))
+                .requires(FabricPermissionBridge.require(id("warps_command"), true))
                 .then(literal("create")
-                        .requires(Permissions.require("pbwarps.create", 2))
+                        .requires(FabricPermissionBridge.require(id("create"), PermissionLevel.GAMEMASTERS))
                         .then(argument("id", StringArgumentType.string())
                                 .executes(WarpCommands::createWarp)
                                 .then(argument("name", StringArgumentType.string())
@@ -96,15 +97,15 @@ public class WarpCommands {
                         )
                 )
                 .then(literal("modify")
-                        .requires(Permissions.require("pbwarps.modify", 2))
+                        .requires(FabricPermissionBridge.require(id("modify"), PermissionLevel.GAMEMASTERS))
                         .then(argument("id", StringArgumentType.string())
                                 .suggests(WARP_ID_SUGGESTION)
                                 .then(literal("name")
-                                        .requires(Permissions.require("pbwarps.modify.name", 2))
+                                        .requires(FabricPermissionBridge.require(id("modify/name"), PermissionLevel.GAMEMASTERS))
                                         .then(argument("name", StringArgumentType.greedyString()).executes(WarpCommands::setName))
                                 )
                                 .then(literal("position")
-                                        .requires(Permissions.require("pbwarps.modify.position", 2))
+                                        .requires(FabricPermissionBridge.require(id("modify/position"), PermissionLevel.GAMEMASTERS))
                                         .executes(WarpCommands::setPosition)
                                         .then(argument("position", Vec3Argument.vec3(true))
                                                 .executes(WarpCommands::setPosition)
@@ -117,15 +118,15 @@ public class WarpCommands {
                                         )
                                 )
                                 .then(literal("icon")
-                                        .requires(Permissions.require("pbwarps.modify.icon", 2))
+                                        .requires(FabricPermissionBridge.require(id("modify/icon"), PermissionLevel.GAMEMASTERS))
                                         .then(argument("icon", ItemArgument.item(access)).executes(WarpCommands::setIcon))
                                 )
                                 .then(literal("priority")
-                                        .requires(Permissions.require("pbwarps.modify.priority", 2))
+                                        .requires(FabricPermissionBridge.require(id("modify/priority"), PermissionLevel.GAMEMASTERS))
                                         .then(argument("priority", IntegerArgumentType.integer()).executes(WarpCommands::setPriority))
                                 )
                                 .then(literal("predicate")
-                                        .requires(Permissions.require("pbwarps.modify.predicate", 2))
+                                        .requires(FabricPermissionBridge.require(id("modify/predicate"), PermissionLevel.GAMEMASTERS))
                                         .then(literal("clear").executes(WarpCommands::clearPredicate))
                                         .then(argument("predicate_type", IdentifierArgument.id())
                                                 .suggests((context, builder) -> SharedSuggestionProvider.suggestResource(PredicateRegistryAccessor.getCODECS().keySet(), builder))
@@ -139,25 +140,25 @@ public class WarpCommands {
                         )
                 )
                 .then(literal("remove")
-                        .requires(Permissions.require("pbwarps.remove", 2))
+                        .requires(FabricPermissionBridge.require(id("remove"), PermissionLevel.GAMEMASTERS))
                         .then(argument("id", StringArgumentType.string())
                                 .suggests(WARP_ID_SUGGESTION)
                                 .executes(WarpCommands::removeWarp)
                         )
                 )
                 .then(literal("teleport")
-                        .requires(Permissions.require("pbwarps.teleport", 2))
+                        .requires(FabricPermissionBridge.require(id("teleport"), PermissionLevel.GAMEMASTERS))
                         .then(argument("id", StringArgumentType.string())
                                 .suggests(WARP_ID_SUGGESTION)
                                 .executes(WarpCommands::warpTeleportSelfUnrestricted)
                                 .then(argument("entity", EntityArgument.entities())
-                                        .requires(Permissions.require("pbwarps.teleport.others", 2))
+                                        .requires(FabricPermissionBridge.require(id("teleport/others"), PermissionLevel.GAMEMASTERS))
                                         .executes(WarpCommands::warpTeleportOthers)
                                 )
                         )
                 )
                 .then(literal("info")
-                        .requires(Permissions.require("pbwarps.info", 2))
+                        .requires(FabricPermissionBridge.require(id("info"), PermissionLevel.GAMEMASTERS))
                         .then(argument("id", StringArgumentType.string())
                                 .suggests(WARP_ID_SUGGESTION)
                                 .executes(WarpCommands::showInfo)
@@ -255,7 +256,7 @@ public class WarpCommands {
 
     private static int setIcon(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         var id = StringArgumentType.getString(context, "id");
-        var icon = ItemArgument.getItem(context, "icon").createItemStack(1, false);
+        var icon = ItemArgument.getItem(context, "icon").createItemStack(1);
 
         if (WarpManager.get().updateWarp(id, x -> x.withIcon(icon))) {
             context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.icon", id, icon.getDisplayName()));
@@ -314,7 +315,7 @@ public class WarpCommands {
         var warp = new WarpData(id, target);
 
         try {
-            icon = ItemArgument.getItem(context, "icon").createItemStack(1, false);
+            icon = ItemArgument.getItem(context, "icon").createItemStack(1);
         } catch (Throwable ignored) {}
         warp = warp.withIcon(icon);
 

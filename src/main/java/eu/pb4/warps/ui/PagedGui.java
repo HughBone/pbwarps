@@ -2,7 +2,6 @@ package eu.pb4.warps.ui;
 
 import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
-import eu.pb4.sgui.api.elements.GuiElementInterface;
 import eu.pb4.sgui.api.gui.SimpleGui;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -32,7 +31,7 @@ public abstract class PagedGui extends SimpleGui implements PageAware {
     }
 
     @Override
-    public void onClose() {
+    public void onManualClose() {
         if (this.closeCallback != null && !ignoreCloseCallback) {
             this.closeCallback.run();
         }
@@ -95,9 +94,9 @@ public abstract class PagedGui extends SimpleGui implements PageAware {
     @Override
     public abstract int getPageAmount();
 
-    protected abstract GuiElementInterface getElement(int id);
+    protected abstract GuiElement getElement(int id);
 
-    protected GuiElementInterface getNavElement(int id) {
+    protected GuiElement getNavElement(int id) {
         return switch (id) {
             case 3 -> this.canPreviousPage() ? GuiUtils.previousPage(this.player,this) : GuiUtils.fillerStack(player);
             case 5 -> this.canNextPage() ? GuiUtils.nextPage(this.player,this) : GuiUtils.fillerStack(player);

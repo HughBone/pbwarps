@@ -27,7 +27,7 @@ public record WarpData(String id, int priority, WrappedText name, ItemStack icon
             Codec.STRING.fieldOf("id").forGetter(WarpData::id),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(WarpData::priority),
             NAME_PARSER.codec().fieldOf("name").forGetter(WarpData::name),
-            ItemStack.SINGLE_ITEM_CODEC.lenientOptionalFieldOf("icon", Items.GRASS_BLOCK.getDefaultInstance()).forGetter(WarpData::icon),
+            ItemStack.OPTIONAL_CODEC.lenientOptionalFieldOf("icon", Items.GRASS_BLOCK.getDefaultInstance()).forGetter(WarpData::icon),
             Target.CODEC.forGetter(WarpData::target),
             PredicateRegistry.CODEC.lenientOptionalFieldOf("predicate").forGetter(WarpData::predicate)
     ).apply(instance, WarpData::new));

@@ -3,7 +3,8 @@ package eu.pb4.warps.ui;
 import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
 import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
-import eu.pb4.sgui.api.elements.GuiElementInterface;
+import eu.pb4.sgui.api.elements.GuiElementBuilderCreator;
+import eu.pb4.sgui.api.elements.SimpleGuiElement;
 import eu.pb4.warps.ModInit;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -21,14 +22,14 @@ import org.jetbrains.annotations.Nullable;
 public class GuiUtils {
     public static final Style TEXTURE_STYLE = Style.EMPTY.withFont(new FontDescription.Resource(Identifier.parse("pbwarps:gui"))).withColor(ChatFormatting.WHITE);
 
-    public static final GuiElement EMPTY = GuiElement.EMPTY;
-    public static final GuiElement EMPTY_STACK = new GuiElementBuilder(Items.WHITE_STAINED_GLASS_PANE)
+    public static final GuiElement EMPTY = SimpleGuiElement.EMPTY;
+    public static final GuiElementBuilderCreator<?> EMPTY_STACK = new GuiElementBuilder(Items.WHITE_STAINED_GLASS_PANE)
             .setName(Component.empty())
             .model(Identifier.parse("air"))
-            .hideTooltip().build();
-    public static final GuiElement FILLER = Util.make(() -> new GuiElementBuilder(Items.WHITE_STAINED_GLASS_PANE)
+            .hideTooltip();
+    public static final GuiElementBuilderCreator<?> FILLER = new GuiElementBuilder(Items.WHITE_STAINED_GLASS_PANE)
                 .setName(Component.empty())
-                .hideTooltip().build());
+                .hideTooltip();
     private static final Identifier BACK_TEXTURE = requestModel("back");
     private static final Identifier NEXT_PAGE_TEXTURE = requestModel("next_page");
     private static final Identifier PREVIOUS_PAGE_TEXTURE = requestModel("previous_page");
@@ -41,7 +42,7 @@ public class GuiUtils {
     }
 
     public static GuiElementBuilder page(ServerPlayer player, int current, int max) {
-        return (new GuiElementBuilder(Items.BOOK)).noDefaults().setName(
+        return new GuiElementBuilder(Items.BOOK).setName(
                 Component.translatable("text.polydex.view.pages",
                         Component.literal("" + current).withStyle(ChatFormatting.WHITE),
                         Component.literal("" + max).withStyle(ChatFormatting.WHITE)
@@ -52,9 +53,8 @@ public class GuiUtils {
     public static GuiElement backButton(ServerPlayer player, Runnable callback, boolean back) {
         return backBase(player)
                 .setName(Component.translatable(back ? "gui.back" : "text.pbwarps.close").withStyle(ChatFormatting.RED))
-                .noDefaults()
                 .hideDefaultTooltip()
-                .setCallback((x, y, z) -> {
+                .setCallback(() -> {
                     playClickSound(player);
                     callback.run();
                 }).build();
@@ -62,8 +62,8 @@ public class GuiUtils {
 
     private static GuiElementBuilder backBase(ServerPlayer player) {
         return hasTexture(player) ?
-                new GuiElementBuilder(Items.TRIAL_KEY).noDefaults().model(BACK_TEXTURE)
-                : new GuiElementBuilder(Items.STRUCTURE_VOID).noDefaults();
+                new GuiElementBuilder(Items.TRIAL_KEY).model(BACK_TEXTURE)
+                : new GuiElementBuilder(Items.STRUCTURE_VOID);
     }
 
     public static final void playClickSound(ServerPlayer player) {
@@ -75,9 +75,8 @@ public class GuiUtils {
     public static GuiElement nextPage(ServerPlayer player, PageAware gui) {
         return nextPageBase(player)
                 .setName(Component.translatable("spectatorMenu.next_page").withStyle(ChatFormatting.WHITE))
-                .noDefaults()
                 .hideDefaultTooltip()
-                .setCallback((x, y, z) -> {
+                .setCallback(() -> {
                     playClickSound(player);
                     gui.nextPage();
                 }).build();
@@ -85,22 +84,22 @@ public class GuiUtils {
 
     private static GuiElementBuilder nextPageBase(ServerPlayer player) {
         return hasTexture(player)
-                ? new GuiElementBuilder(Items.TRIAL_KEY).noDefaults().model(NEXT_PAGE_TEXTURE)
-                : new GuiElementBuilder(Items.PLAYER_HEAD).noDefaults().setProfileSkinTexture(GuiHeadTextures.GUI_NEXT_PAGE);
+                ? new GuiElementBuilder(Items.TRIAL_KEY).model(NEXT_PAGE_TEXTURE)
+                : new GuiElementBuilder(Items.PLAYER_HEAD).setProfileSkinTexture(GuiHeadTextures.GUI_NEXT_PAGE);
     }
 
     private static GuiElementBuilder previousPageBase(ServerPlayer player) {
         return hasTexture(player)
-                ? new GuiElementBuilder(Items.TRIAL_KEY).noDefaults().model(PREVIOUS_PAGE_TEXTURE)
-                : new GuiElementBuilder(Items.PLAYER_HEAD).noDefaults().setProfileSkinTexture(GuiHeadTextures.GUI_PREVIOUS_PAGE);
+                ? new GuiElementBuilder(Items.TRIAL_KEY).model(PREVIOUS_PAGE_TEXTURE)
+                : new GuiElementBuilder(Items.PLAYER_HEAD).setProfileSkinTexture(GuiHeadTextures.GUI_PREVIOUS_PAGE);
     }
 
     public static GuiElement previousPage(ServerPlayer player, PageAware gui) {
         return previousPageBase(player)
                 .setName(Component.translatable("spectatorMenu.previous_page").withStyle(ChatFormatting.WHITE))
-                .noDefaults()
+                
                 .hideDefaultTooltip()
-                .setCallback((x, y, z) -> {
+                .setCallback(() -> {
                     playClickSound(player);
                     gui.previousPage();
                 }).build();
@@ -110,8 +109,8 @@ public class GuiUtils {
         return PolymerResourcePackUtils.hasMainPack(player);
     }
 
-    public static GuiElementInterface fillerStack(ServerPlayer player) {
-        return hasTexture(player) ? EMPTY_STACK : FILLER;
+    public static GuiElement fillerStack(ServerPlayer player) {
+        return hasTexture(player) ? EMPTY_STACK.build() : FILLER.build();
     }
 
     public static Component formatTexturedText(ServerPlayer player, @Nullable Component texture, @Nullable Component input) {

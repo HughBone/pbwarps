@@ -2,7 +2,7 @@ package eu.pb4.warps.ui;
 
 import eu.pb4.predicate.api.PredicateContext;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
-import eu.pb4.sgui.api.elements.GuiElementInterface;
+import eu.pb4.sgui.api.elements.GuiElement;
 import eu.pb4.warps.WarpManager;
 import eu.pb4.warps.data.WarpData;
 import java.util.ArrayList;
@@ -37,14 +37,14 @@ public class WarpSelectGui extends PagedGui {
     }
 
     @Override
-    protected GuiElementInterface getElement(int id) {
+    protected GuiElement getElement(int id) {
         if (this.warps.size() > id) {
             var warp = this.warps.get(id);
 
             var icon = GuiElementBuilder.from(warp.icon());
             icon.setName(warp.name().text());
 
-            icon.setCallback((x, y, z) -> {
+            icon.setCallback(() -> {
                 playClickSound(player);
                 this.close();
                 warp.handleTeleport(player);
