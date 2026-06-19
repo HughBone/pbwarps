@@ -23,11 +23,11 @@ public class GuiUtils {
     public static final Style TEXTURE_STYLE = Style.EMPTY.withFont(new FontDescription.Resource(Identifier.parse("pbwarps:gui"))).withColor(ChatFormatting.WHITE);
 
     public static final GuiElement EMPTY = SimpleGuiElement.EMPTY;
-    public static final GuiElementBuilderCreator<?> EMPTY_STACK = new GuiElementBuilder(Items.WHITE_STAINED_GLASS_PANE)
+    public static final GuiElementBuilderCreator<?> EMPTY_STACK = new GuiElementBuilder(Items.STAINED_GLASS_PANE.white())
             .setName(Component.empty())
             .model(Identifier.parse("air"))
             .hideTooltip();
-    public static final GuiElementBuilderCreator<?> FILLER = new GuiElementBuilder(Items.WHITE_STAINED_GLASS_PANE)
+    public static final GuiElementBuilderCreator<?> FILLER = new GuiElementBuilder(Items.STAINED_GLASS_PANE.white())
                 .setName(Component.empty())
                 .hideTooltip();
     private static final Identifier BACK_TEXTURE = requestModel("back");
