@@ -3,6 +3,7 @@
 	"package": "eu.pb4.warps.mixins",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
+		"CommandNodeAccessor",
 		"PredicateRegistryAccessor"
 	],
 	"injectors": {

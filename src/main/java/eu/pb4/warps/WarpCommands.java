@@ -154,7 +154,7 @@ public class WarpCommands {
                         )
                 )
                 .then(literal("teleport")
-                        .requires(FabricPermissionBridge.require(id("teleport"), PermissionLevel.GAMEMASTERS))
+                        .requires(WarpCommands::isWarpAdmin)
                         .then(argument("id", StringArgumentType.string())
                                 .suggests(WARP_ID_SUGGESTION)
                                 .executes(WarpCommands::warpTeleportSelfUnrestricted)
@@ -173,6 +173,23 @@ public class WarpCommands {
 
                 )
         );
+
+        // Restrict the vanilla /tp and /teleport commands to warp admins only.
+        restrictToWarpAdmins(dispatcher, "teleport");
+        restrictToWarpAdmins(dispatcher, "tp");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void restrictToWarpAdmins(CommandDispatcher<CommandSourceStack> dispatcher, String name) {
+        var node = dispatcher.getRoot().getChild(name);
+        if (node != null) {
+            ((eu.pb4.warps.mixins.CommandNodeAccessor<CommandSourceStack>) node).setRequirement(WarpCommands::isWarpAdmin);
+        }
+    }
+
+    private static boolean isWarpAdmin(CommandSourceStack source) {
+        var entity = source.getEntity();
+        return entity != null && WarpAdmins.get().isAdmin(entity.getUUID());
     }
 
     private static int showInfo(CommandContext<CommandSourceStack> context) {
