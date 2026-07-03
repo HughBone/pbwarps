@@ -72,6 +72,10 @@ public record WarpData(String id, int priority, WrappedText name, ItemStack icon
         return new WarpData(id, priority, name, icon, target, predicate, privacy, owner);
     }
 
+    public WarpData withOwner(@Nullable UUID owner) {
+        return new WarpData(id, priority, name, icon, target, predicate, privacy, Optional.ofNullable(owner));
+    }
+
     public void handleTeleport(Entity entity) {
         var target = this.target().asTeleportTarget(Objects.requireNonNull(entity.level().getServer()), entity, this::teleportEffects);
 

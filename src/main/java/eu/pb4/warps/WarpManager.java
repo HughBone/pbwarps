@@ -16,6 +16,8 @@ import java.util.function.Function;
 
 public class WarpManager {
     private static final Codec<List<WarpData>> SAVE_CODEC = WarpData.CODEC.listOf().fieldOf("warps").codec();
+    // Every warp must have an owner. Legacy warps without one default to AllOutJay.
+    private static final UUID DEFAULT_OWNER = ModInit.ALLOUTJAY_UUID;
     private static WarpManager manager = null;
     private final TreeMap<String, WarpData> warps = new TreeMap<>();
     private List<WarpData> warpArr = null;
@@ -37,7 +39,13 @@ public class WarpManager {
         if (Files.exists(path)) {
             try {
                 var data = SAVE_CODEC.decode(server.registryAccess().createSerializationContext(JsonOps.INSTANCE), JsonParser.parseString(Files.readString(path)));
-                data.result().get().getFirst().forEach(x -> manager.warps.put(x.id(), x));
+                data.result().get().getFirst().forEach(x -> {
+                    // Ensure every warp has an owner; legacy ownerless warps default to AllOutJay.
+                    if (x.owner().isEmpty()) {
+                        x = x.withOwner(DEFAULT_OWNER);
+                    }
+                    manager.warps.put(x.id(), x);
+                });
             } catch (Throwable e) {
                 e.printStackTrace();
             }
@@ -54,6 +62,9 @@ public class WarpManager {
             return false;
         }
 
+        if (data.owner().isEmpty()) {
+            data = data.withOwner(DEFAULT_OWNER);
+        }
         this.warps.put(data.id(), data);
         warpArr = null;
         return true;

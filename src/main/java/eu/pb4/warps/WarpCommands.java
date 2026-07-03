@@ -22,6 +22,7 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.CompoundTagArgument;
 import net.minecraft.commands.arguments.DimensionArgument;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.GameProfileArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.coordinates.RotationArgument;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
@@ -172,6 +173,15 @@ public class WarpCommands {
                         )
 
                 )
+                .then(literal("setowner")
+                        .requires(WarpCommands::isWarpAdmin)
+                        .then(argument("id", StringArgumentType.string())
+                                .suggests(WARP_ID_SUGGESTION)
+                                .then(argument("player", GameProfileArgument.gameProfile())
+                                        .executes(WarpCommands::setOwner)
+                                )
+                        )
+                )
         );
 
         // Restrict the vanilla /tp and /teleport commands to warp admins only.
@@ -190,6 +200,24 @@ public class WarpCommands {
     private static boolean isWarpAdmin(CommandSourceStack source) {
         var entity = source.getEntity();
         return entity != null && WarpAdmins.get().isAdmin(entity.getUUID());
+    }
+
+    private static int setOwner(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        var id = StringArgumentType.getString(context, "id");
+        var profiles = GameProfileArgument.getGameProfiles(context, "player");
+        if (profiles.size() != 1) {
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.owner.single_player").withStyle(ChatFormatting.RED));
+            return 0;
+        }
+        var profile = profiles.iterator().next();
+
+        if (WarpManager.get().updateWarp(id, x -> x.withOwner(profile.id()))) {
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.owner", id, profile.name()));
+            return 1;
+        }
+
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
+        return 0;
     }
 
     private static int showInfo(CommandContext<CommandSourceStack> context) {

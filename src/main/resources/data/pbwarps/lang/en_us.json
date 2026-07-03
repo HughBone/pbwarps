@@ -12,6 +12,8 @@
   "command.pbwarps.modify.priority": "Modified '%s' warp priority to %s!",
   "command.pbwarps.modify.privacy": "Modified '%s' warp privacy to %s!",
   "command.pbwarps.modify.privacy.not_owner": "Only the creator of warp '%s' can change its privacy!",
+  "command.pbwarps.modify.owner": "Modified '%s' warp owner to %s!",
+  "command.pbwarps.modify.owner.single_player": "You must specify exactly one player!",
   "command.pbwarps.remove": "Removed warp '%s'!",
   "command.pbwarps.create.duplicate": "Warp '%s' already exists!",
   "command.pbwarps.invalid_warp": "Warp '%s' doesn't exist!",

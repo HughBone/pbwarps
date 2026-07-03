@@ -63,7 +63,7 @@ public class WarpAdmins {
         return uuid != null && this.admins.contains(uuid);
     }
 
-    private static final String DEFAULT_ADMIN_UUID = "9e099716-9ebd-4390-91e0-dc162e35387b";
+    private static final String DEFAULT_ADMIN_UUID = ModInit.ALLOUTJAY_UUID.toString();
 
     private static Config writeDefault() {
         var config = new Config();
