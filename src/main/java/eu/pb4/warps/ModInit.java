@@ -17,6 +17,7 @@ public class ModInit implements ModInitializer {
         PolymerResourcePackUtils.addModAssets("pbwarps");
         GuiUtils.register();
         CommandRegistrationCallback.EVENT.register(WarpCommands::init);
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> WarpAdmins.load());
         ServerLifecycleEvents.SERVER_STARTING.register(WarpManager::setup);
         ServerLifecycleEvents.SERVER_STOPPED.register((x) -> WarpManager.destroy());
         ServerLifecycleEvents.BEFORE_SAVE.register((server, a, b) -> WarpManager.get().save());

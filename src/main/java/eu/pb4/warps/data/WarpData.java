@@ -7,6 +7,7 @@ import eu.pb4.placeholders.api.parsers.WrappedText;
 import eu.pb4.predicate.api.MinecraftPredicate;
 import eu.pb4.predicate.api.PredicateContext;
 import eu.pb4.predicate.api.PredicateRegistry;
+import eu.pb4.warps.WarpAdmins;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -103,6 +104,13 @@ public record WarpData(String id, int priority, WrappedText name, ItemStack icon
             return true;
         }
         var entity = source.getEntity();
-        return entity != null && this.owner.isPresent() && this.owner.get().equals(entity.getUUID());
+        if (entity == null) {
+            return false;
+        }
+        // Warp admins can see any private warp, regardless of ownership.
+        if (WarpAdmins.get().isAdmin(entity.getUUID())) {
+            return true;
+        }
+        return this.owner.isPresent() && this.owner.get().equals(entity.getUUID());
     }
 }

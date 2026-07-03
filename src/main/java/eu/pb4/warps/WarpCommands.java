@@ -310,10 +310,11 @@ public class WarpCommands {
             return 0;
         }
 
-        // Only the creator of the warp is allowed to change its privacy.
+        // The creator of the warp, or a warp admin, is allowed to change its privacy.
         var entity = context.getSource().getEntity();
         var isOwner = entity != null && warp.owner().isPresent() && warp.owner().get().equals(entity.getUUID());
-        if (!isOwner) {
+        var isAdmin = entity != null && WarpAdmins.get().isAdmin(entity.getUUID());
+        if (!isOwner && !isAdmin) {
             context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.privacy.not_owner", id).withStyle(ChatFormatting.RED));
             return 0;
         }
