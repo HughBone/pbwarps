@@ -1,5 +1,8 @@
 package eu.pb4.warps;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
@@ -16,6 +19,7 @@ import java.util.function.Function;
 
 public class WarpManager {
     private static final Codec<List<WarpData>> SAVE_CODEC = WarpData.CODEC.listOf().fieldOf("warps").codec();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     // Every warp must have an owner. Legacy warps without one default to AllOutJay.
     private static final UUID DEFAULT_OWNER = ModInit.ALLOUTJAY_UUID;
     private static WarpManager manager = null;
@@ -119,7 +123,7 @@ public class WarpManager {
         var data = SAVE_CODEC.encodeStart(server.registryAccess().createSerializationContext(JsonOps.INSTANCE), List.copyOf(this.warps.values()));
         if (data.isSuccess()) {
             try {
-                Files.writeString(this.savePath, data.result().get().toString());
+                Files.writeString(this.savePath, GSON.toJson((JsonElement) data.result().get()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
