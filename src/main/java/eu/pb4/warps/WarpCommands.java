@@ -9,6 +9,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import eu.pb4.predicate.api.PredicateContext;
 import eu.pb4.predicate.api.PredicateRegistry;
+import eu.pb4.warps.data.Privacy;
 import eu.pb4.warps.data.Target;
 import eu.pb4.warps.data.WarpData;
 import eu.pb4.warps.mixins.PredicateRegistryAccessor;
@@ -34,6 +35,7 @@ import net.minecraft.server.permissions.PermissionLevel;
 import net.minecraft.util.RandomSource;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import static eu.pb4.warps.ModInit.id;
@@ -44,7 +46,7 @@ public class WarpCommands {
     private static final SuggestionProvider<CommandSourceStack> WARP_ID_SUGGESTION_WITH_PREDICATE = (context, builder) -> {
         var ctx = PredicateContext.of(context.getSource());
         for (var warp : WarpManager.get().warps()) {
-            if (warp.id().startsWith(builder.getRemainingLowerCase()) && (warp.predicate().isEmpty() || warp.predicate().get().test(ctx).success())) {
+            if (warp.id().startsWith(builder.getRemainingLowerCase()) && warp.isVisibleTo(context.getSource()) && (warp.predicate().isEmpty() || warp.predicate().get().test(ctx).success())) {
                 builder.suggest(warp.id(), warp.name().text());
             }
         }
@@ -125,6 +127,11 @@ public class WarpCommands {
                                         .requires(FabricPermissionBridge.require(id("modify/priority"), PermissionLevel.GAMEMASTERS))
                                         .then(argument("priority", IntegerArgumentType.integer()).executes(WarpCommands::setPriority))
                                 )
+                                .then(literal("privacy")
+                                        .requires(FabricPermissionBridge.require(id("modify/privacy"), PermissionLevel.GAMEMASTERS))
+                                        .then(literal("public").executes(context -> setPrivacy(context, Privacy.PUBLIC)))
+                                        .then(literal("private").executes(context -> setPrivacy(context, Privacy.PRIVATE)))
+                                )
                                 .then(literal("predicate")
                                         .requires(FabricPermissionBridge.require(id("modify/predicate"), PermissionLevel.GAMEMASTERS))
                                         .then(literal("clear").executes(WarpCommands::clearPredicate))
@@ -181,6 +188,8 @@ public class WarpCommands {
         context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.unformatted_name", warp.name().input()));
         context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.icon", warp.icon().getDisplayName()));
         context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.position", warp.target().pos().toString(), warp.target().yaw().map(String::valueOf).orElse("~"), warp.target().pitch().map(String::valueOf).orElse("~"), warp.target().world().identifier().toString()));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.privacy", warp.privacy().getSerializedName()));
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.owner", warp.owner().map(UUID::toString).orElse("-")));
         if (warp.predicate().isPresent()) {
             context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.predicate_type", warp.predicate().get().identifier().toString()));
             context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.info.predicate_data", NbtUtils.toPrettyComponent(
@@ -293,6 +302,31 @@ public class WarpCommands {
         return 0;
     }
 
+    private static int setPrivacy(CommandContext<CommandSourceStack> context, Privacy privacy) {
+        var id = StringArgumentType.getString(context, "id");
+        var warp = WarpManager.get().get(id);
+        if (warp == null) {
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+
+        // Only the creator of the warp is allowed to change its privacy.
+        var entity = context.getSource().getEntity();
+        var isOwner = entity != null && warp.owner().isPresent() && warp.owner().get().equals(entity.getUUID());
+        if (!isOwner) {
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.privacy.not_owner", id).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+
+        if (WarpManager.get().updateWarp(id, x -> x.withPrivacy(privacy))) {
+            context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.modify.privacy", id, privacy.getSerializedName()));
+            return 1;
+        }
+
+        context.getSource().sendSystemMessage(Component.translatable("command.pbwarps.invalid_warp", id).withStyle(ChatFormatting.RED));
+        return 0;
+    }
+
     private static int setPriority(CommandContext<CommandSourceStack> context) {
         var id = StringArgumentType.getString(context, "id");
         var priority = IntegerArgumentType.getInteger(context, "priority");
@@ -312,7 +346,8 @@ public class WarpCommands {
 
         var icon = BuiltInRegistries.ITEM.getRandom(RandomSource.create()).orElseThrow().value().getDefaultInstance();
 
-        var warp = new WarpData(id, target);
+        var creator = context.getSource().getEntity();
+        var warp = new WarpData(id, target, creator != null ? creator.getUUID() : null);
 
         try {
             icon = ItemArgument.getItem(context, "icon").createItemStack(1);

@@ -18,8 +18,9 @@ public class WarpSelectGui extends PagedGui {
         this.setTitle(GuiUtils.formatTexturedText(player, Component.literal("e"), Component.translatable("gui.pbwarps.warp_selector")));
 
         var ctx = PredicateContext.of(player);
+        var source = player.createCommandSourceStack();
         for (var warp : WarpManager.get().warps()) {
-            if (warp.predicate().isEmpty() || warp.predicate().get().test(ctx).success()) {
+            if (warp.isVisibleTo(source) && (warp.predicate().isEmpty() || warp.predicate().get().test(ctx).success())) {
                 this.warps.add(warp);
             }
         }

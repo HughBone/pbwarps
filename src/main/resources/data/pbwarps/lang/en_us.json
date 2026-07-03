@@ -10,6 +10,8 @@
   "command.pbwarps.modify.name": "Modified '%s' warp name to %s!",
   "command.pbwarps.modify.icon": "Modified '%s' warp icon to %s!",
   "command.pbwarps.modify.priority": "Modified '%s' warp priority to %s!",
+  "command.pbwarps.modify.privacy": "Modified '%s' warp privacy to %s!",
+  "command.pbwarps.modify.privacy.not_owner": "Only the creator of warp '%s' can change its privacy!",
   "command.pbwarps.remove": "Removed warp '%s'!",
   "command.pbwarps.create.duplicate": "Warp '%s' already exists!",
   "command.pbwarps.invalid_warp": "Warp '%s' doesn't exist!",
@@ -19,6 +21,8 @@
   "command.pbwarps.info.unformatted_name": "Unformatted name: %s",
   "command.pbwarps.info.position": "Position: %s (%s %s) in %s",
   "command.pbwarps.info.icon": "Icon: %s",
+  "command.pbwarps.info.privacy": "Privacy: %s",
+  "command.pbwarps.info.owner": "Owner: %s",
   "command.pbwarps.info.predicate_type": "Predicate Type: %s",
   "command.pbwarps.info.predicate_data": "Predicate Data: %s",
   "gui.pbwarps.warp_selector": "Warp to..."
